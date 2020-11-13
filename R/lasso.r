@@ -9,7 +9,8 @@ gen_data <- function(n, p, s, sig, rho) {
 
     S <- diag(1 - rho, p) + rho
     X <- mvtnorm::rmvnorm(n, mean=rep(0, p), S)
-    X <- scale(X, center=FALSE)      # TODO: fix X'X_jj != n?
+    norms <- apply(X, 2, function(x) norm(as.matrix(x), type="F"))
+    X <- t(apply(X, 1, function(x) x / norms)) * sqrt(n)
 
     e <- rnorm(n)
     beta.0 <- c(rep(1, s), rep(0, p-s))
@@ -19,12 +20,13 @@ gen_data <- function(n, p, s, sig, rho) {
 }
 
 
+N_exp <- 1e3
 N.lambda <- 100
-lambdas <- seq(0.0001, 10.0001, length.out=N.lambda)
-PE <- matrix(nrow=100, ncol=length(lambdas))
+lambdas <- seq(0.0001, 10.001, length.out=N.lambda)
+prediction.error <- matrix(nrow=N_exp, ncol=length(lambdas))
 
-for (j in 1:N.lambda) {
-    d <- gen_data(20, 40, 4, 1, 0)
+for (i in 1:N_exp) {
+    d <- gen_data(n=20, p=40, s=4, sig=1, rho=0)
     l <- glmnet::glmnet(d$X, d$Y, 
 	    alpha=1,                          # for LASSO
 	    # nlambda=100,
@@ -34,11 +36,16 @@ for (j in 1:N.lambda) {
 	    lambda=lambdas,
 	    intercept=FALSE)
     
-    for (i in seq_along(lambdas)) {
-	PE[j, i] <- sum((d$X %*% (l$beta[ , i] - d$beta))^2)
+    for (j in seq_along(lambdas)) {
+	prediction.error[i, j] <- 
+	    sum((d$X %*% (l$beta[ , j] - d$beta))^2)
     }
 }
 
 
-plot(rev(apply(PE, 2, mean)))
+plot(lambdas, rev(apply(prediction.error, 2, mean)), type="l")
+lines(lambdas, rev(apply(prediction.error, 2, function(p) 
+			 quantile(p, 0.025))))
+lines(lambdas, rev(apply(prediction.error, 2, function(p) 
+			 quantile(p, 0.975))))
 
