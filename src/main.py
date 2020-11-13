@@ -39,9 +39,12 @@ beta_0 = data.get("beta_0")
 X = data.get("X")
 Y = data.get("Y")
 
+prediction_error = []
 for lam in lambdas:
     beta_hat = fit_lasso(X, Y, lam)
-    prediction_error = np.sum(np.power(np.dot(X, beta_hat - beta_0), 2))
-    print(prediction_error)
+    prediction_error += [np.sum(np.power(np.dot(X, beta_hat - beta_0), 2))]
 
+
+plt.plot(prediction_error)
+plt.show()
 
