@@ -26,7 +26,7 @@ def fit_lasso(X, y, lam):
     Fits LASSO with LARS
     """
     model = linear_model.LassoLars(alpha = lam, fit_intercept = False, 
-            normalize = False)
+            normalize = True)
     model.fit(X, y)
     beta_hat = model.coef_
     return beta_hat
@@ -34,7 +34,7 @@ def fit_lasso(X, y, lam):
 
 
 lambdas = np.arange(0.001, 10.001, 0.1)
-data = generate_data(20, 40, 4, 1, 0.5)
+data = generate_data(20, 40, 4, 1, 0)
 beta_0 = data.get("beta_0")
 X = data.get("X")
 Y = data.get("Y")
@@ -45,6 +45,6 @@ for lam in lambdas:
     prediction_error += [np.sum(np.power(np.dot(X, beta_hat - beta_0), 2))]
 
 
-plt.plot(prediction_error)
+plt.plot(lambdas, prediction_error)
 plt.show()
 
