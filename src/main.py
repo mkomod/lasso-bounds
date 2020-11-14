@@ -64,10 +64,18 @@ def fit_lasso(X, y, lam):
     return beta_hat
 
 
-if __name__ == "__main__":
+def main(n=20, p=40, s=4, sig=1, rho=0, eta=0.1, Nexp=5):
     if len(sys.argv) > 1:
         try:
-            n, p, s, sig, rho, eta, Nexp = sys.argv[1:]
+            (
+                n,
+                p,
+                s,
+                sig,
+                rho,
+            ) = [int(x) for x in sys.argv[1:-2]]
+            eta = float(sys.argv[-2])
+            Nexp = int(sys.argv[-1])
         except ValueError:
             raise (
                 ValueError(
@@ -75,8 +83,7 @@ if __name__ == "__main__":
                 )
             )
     else:
-        n, p, s, sig, rho, eta = 20, 40, 4, 1, 0, 0.1
-        Nexp = 5
+        n, p, s, sig, rho, eta = n, p, s, sig, rho, eta, Nexp
 
     lambdas = np.linspace(0.001, 0.7, 100)
     prediction_error = np.zeros((len(lambdas), Nexp))
@@ -148,3 +155,7 @@ if __name__ == "__main__":
     plt.savefig(
         f"figs/numexp{Nexp}_n{n:}p{p}s{s}sig{sig}rho{rho}eta{str(eta).replace('.','_')}"
     )
+
+
+if __name__ == "__main__":
+    main()
