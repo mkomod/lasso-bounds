@@ -185,3 +185,7 @@ po/*~
 
 tags
 .ccls
+
+
+figs/
+.vscode
