@@ -51,7 +51,7 @@ def fit_lasso(X, y, lam):
     return beta_hat
     
 
-n, p, s, sig, rho, eta = 20, 40, 4, 1, 0, 0.1
+n, p, s, sig, rho, eta = 20, 40, 4, 1, 0, 0.001
 
 Nexp = 100
 lambdas = np.linspace(0.001, 0.7, 100)
@@ -85,12 +85,21 @@ mean_pde2 = np.mean(prediction_error2, axis = 1)
 lambda_min_1 = lambdas[np.argmin(mean_pde)]
 lambda_min_2 = lambdas[np.argmin(mean_pde2)]
 
+# ALGO 1
 plt.plot(lambdas, mean_pde, label = "Algo 1", color = "b")
+plt.fill_between(lambdas, np.quantile(prediction_error, 0.025, axis = 1), np.quantile(prediction_error, 0.975, axis = 1),
+color = "b", alpha = .2)
 plt.axvline(lambda_min_1, color = "b")
+
+# ALGO 2
 plt.plot(lambdas, mean_pde2, label = "Algo 2", color = "r")
+plt.fill_between(lambdas, np.quantile(prediction_error2, 0.025, axis = 1), np.quantile(prediction_error2, 0.975, axis = 1),
+color = "r", alpha = .2)
 plt.axvline(lambda_min_2, color = "r")
+
 plt.title(f"Parameters: {(n, p, s, sig, rho, eta)}")
+plt.axvline(np.sqrt(2)*lambda_min_1, c = "k", ls = "--")
 plt.xlabel("$\lambda$")
-plt.ylabel("Mean Prediction Error")
+plt.ylabel("Prediction Error")
 plt.legend()
 plt.show()
