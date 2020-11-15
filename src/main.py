@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+import pickle
 from datetime import datetime
 
 from sklearn import linear_model
@@ -20,38 +21,27 @@ def normalise_matrix(X):
 
 def generate_data(n, p, s, sig, rho, eta):
     """
-    Generates data according to algorithm 1 from
+    Generates data according to either algorithm 1 or algorithm 2 depending on if eta is supplied.
+
+    Returns tuple of ('real' beta, X, Y)
     """
-    beta_01 = np.concatenate((np.ones(s), np.zeros(p - s)))
-    beta_02 = np.concatenate((np.ones(s), np.zeros(p ** 2 - s)))
 
     mean = np.zeros(p)
     cov = np.diag(np.ones(p) - rho) + rho
     X = np.random.multivariate_normal(mean, cov, n)
-    X2 = X.copy()
+    orig_cols = X.shape[1]
+    if eta:
+        for j in range(0, p - 1):
+            N = np.random.multivariate_normal(mean, np.eye(p), n)
+            X = np.concatenate((X, X[:, :orig_cols] + eta * N), axis=1)
 
-    for j in range(0, p - 1):
-        N = np.random.multivariate_normal(mean, np.eye(p), n)
-        X2 = np.concatenate((X2, X + eta * N), axis=1)
-
+    beta = np.concatenate((np.ones(s), np.zeros(X.shape[1] - s)))
     epsilon = np.random.normal(0, sig, n)
-    Y = X.dot(beta_01) + epsilon
+    Y = X.dot(beta) + epsilon
 
     X = normalise_matrix(X)
-    X2 = normalise_matrix(X2)
 
-    return {
-        "X": X,
-        "X2": X2,
-        "Y": Y,
-        "beta_01": beta_01,
-        "beta_02": beta_02,
-        "n": n,
-        "p": p,
-        "s": s,
-        "sig": sig,
-        "rho": rho,
-    }
+    return (beta, X, Y)
 
 
 def fit_lasso(X, y, lam):
@@ -64,7 +54,9 @@ def fit_lasso(X, y, lam):
     return beta_hat
 
 
-def main(n=20, p=40, s=4, sig=1, rho=0, eta=0.1, Nexp=5):
+def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=3):
+    print("Starting", end="")
+    # Parse any args supplied if used as a CLI
     if len(sys.argv) > 1:
         try:
             (
@@ -83,78 +75,89 @@ def main(n=20, p=40, s=4, sig=1, rho=0, eta=0.1, Nexp=5):
                 )
             )
     else:
-        n, p, s, sig, rho, eta = n, p, s, sig, rho, eta, Nexp
+        n, p, s, sig, rho, eta, Nexp = (
+            n,
+            p,
+            s,
+            sig,
+            rho,
+            eta,
+            Nexp,
+        )
 
+    # Set ranges to experiment over for params of interest
+    etas = np.linspace(0, eta, 5)
+    etas = np.round(etas, 1)
     lambdas = np.linspace(0.001, 0.7, 100)
-    prediction_error = np.zeros((len(lambdas), Nexp))
-    prediction_error2 = np.zeros((len(lambdas), Nexp))
 
-    print("starting", end="")
+    # Allocate space for results
+    mean_prediction_errors = np.zeros((len(lambdas), len(etas)))
+    min_lambdas = np.zeros([len(etas)])
+    quantiles = np.zeros((len(lambdas), len(etas), 2))
 
-    for exp_num in range(Nexp):
-        data = generate_data(n, p, s, sig, rho, eta)
-        beta_01 = data.get("beta_01")
-        beta_02 = data.get("beta_02")
-        X = data.get("X")
-        X2 = data.get("X2")
-        Y = data.get("Y")
+    prediction_errors = np.zeros((len(lambdas), Nexp))
 
-        for i, lam in enumerate(lambdas):
-            beta_hat = fit_lasso(X, Y, lam)
-            beta_hat2 = fit_lasso(X2, Y, lam)
-            prediction_error[i, exp_num] = np.sum(
-                np.power(np.dot(X, beta_hat - beta_01), 2)
-            )
-            prediction_error2[i, exp_num] = np.sum(
-                np.power(np.dot(X2, beta_hat2 - beta_02), 2)
+    tot_etas = len(etas)
+    for eta_idx, eta in enumerate(etas):
+        for exp_num in range(Nexp):
+            print(
+                f"\r eta {eta_idx+1} / {tot_etas}| experiment {exp_num+1} / {Nexp}",
+                end="",
+                flush=True,
             )
 
-        print(f"\r experiment {exp_num+1} / {Nexp}", end="", flush=True)
+            beta, X, Y = generate_data(n, p, s, sig, rho, eta)
 
-    print("\nDone")
+            for lam_idx, lam in enumerate(lambdas):
+                beta_hat = fit_lasso(X, Y, lam)
+                prediction_errors[lam_idx, exp_num] = np.sum(
+                    np.power(np.dot(X, beta_hat - beta), 2)
+                )
 
-    # mean prediction error
-    mean_pde = np.mean(prediction_error, axis=1)
-    mean_pde2 = np.mean(prediction_error2, axis=1)
+        quantiles[:, eta_idx, 0] = np.quantile(prediction_errors, 0.025, axis=1)
+        quantiles[:, eta_idx, 1] = np.quantile(prediction_errors, 0.975, axis=1)
+        mean_prediction_errors[:, eta_idx] = np.mean(prediction_errors, axis=1)
+        min_lambdas[eta_idx] = lambdas[np.argmin(mean_prediction_errors[:, eta_idx])]
 
-    lambda_min_1 = lambdas[np.argmin(mean_pde)]
-    lambda_min_2 = lambdas[np.argmin(mean_pde2)]
+    # Plot Results
+    for eta_idx, eta in enumerate(etas):
+        blueness = (tot_etas - eta_idx) / tot_etas
+        c = (1 - blueness, 0.5, blueness)
+        plt.plot(
+            lambdas,
+            mean_prediction_errors[:, -eta_idx],
+            label=f"$\eta$={eta}",
+            color=c,
+        )
+        plt.fill_between(
+            lambdas,
+            quantiles[:, -eta_idx, 0],
+            quantiles[:, -eta_idx, 1],
+            color=c,
+            alpha=0.5,
+        )
+        plt.axvline(min_lambdas[-eta_idx], color=c, alpha=0.5)
 
-    # ALGO 1
-    plt.plot(lambdas, mean_pde, label="Algo 1", color="b")
-    plt.fill_between(
-        lambdas,
-        np.quantile(prediction_error, 0.025, axis=1),
-        np.quantile(prediction_error, 0.975, axis=1),
-        color="b",
-        alpha=0.2,
+    # Save results if you wanna mess around with plotting later
+
+    pickle.dump(
+        (lambdas, mean_prediction_errors, etas, n, p, s, sig, rho, eta, Nexp),
+        open("numexp{Nexp}_n{n:}p{p}s{s}sig{sig}rho{rho}etarange_results.p", "wb"),
     )
-    plt.axvline(lambda_min_1, color="b")
-
-    # ALGO 2
-    plt.plot(lambdas, mean_pde2, label="Algo 2", color="r")
-    plt.fill_between(
-        lambdas,
-        np.quantile(prediction_error2, 0.025, axis=1),
-        np.quantile(prediction_error2, 0.975, axis=1),
-        color="r",
-        alpha=0.2,
-    )
-    plt.axvline(lambda_min_2, color="r")
 
     plt.title(
-        r"Parameters: n={}, p={}, s={}, $\sigma$={}, $\rho$={}, $\eta$={}".format(
-            n, p, s, sig, rho, eta
+        r"Parameters: n={}, p={}, s={}, $\sigma$={}, $\rho$={}".format(
+            n, p, s, sig, rho
         )
     )
-    plt.axvline(np.sqrt(2) * lambda_min_1, c="k", ls="--")
+    plt.axvline(np.sqrt(2) * min_lambdas[0], c="k", ls="--", alpha=0.5)
     plt.xlabel("$\lambda$")
     plt.ylabel("Prediction Error")
-    plt.legend()
+    plt.legend(loc="lower right")
+    plt.savefig(f"figs/numexp{Nexp}_n{n:}p{p}s{s}sig{sig}rho{rho}etarange")
     plt.show()
-    plt.savefig(
-        f"figs/numexp{Nexp}_n{n:}p{p}s{s}sig{sig}rho{rho}eta{str(eta).replace('.','_')}"
-    )
+
+    print("\nDone")
 
 
 if __name__ == "__main__":
