@@ -99,6 +99,11 @@ def fit_lasso(X, y, lam):
 
 
 def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
+    """
+    Usage:
+
+    python script_name number_of_experiments variable_to_vary param [list of params]
+    """
     print("Starting")
 
     # Parse which param you are varying
@@ -191,14 +196,7 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
 
     # plt.axvline(np.sqrt(2) * mean_min_lambdas[0], c="k", ls="--", alpha=0.5)
 
-    title_str = (
-        title_str.format(*stable_params)
-        .replace(".", "_")
-        .replace("\\", "")
-        .replace("$", "")
-        .replace(" ", "")
-        .replace("Parameters:", "")
-    )
+    title_str = title_str.format(*stable_params)
     plt.title(title_str)
     plt.xlabel("$\lambda$")
     plt.ylabel("Prediction Error")
@@ -206,6 +204,13 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
 
     print("Saving...")
     # Save your stuff
+    title_str = (
+        title_str.replace(".", "_")
+        .replace("\\", "")
+        .replace("$", "")
+        .replace(" ", "")
+        .replace("Parameters:", "")
+    )
     plt.savefig(f"figs/{title_str}")
     # Save results if you wanna mess around with plotting later
     pickle.dump(
