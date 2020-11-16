@@ -131,7 +131,7 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
             title_str = r"Parameters: n={}, p={}, s={}, $\rho$={}"
         elif param_given == "rhos":
             rhos = [float(x) for x in values_given]
-            var_label = "$\\rhos$"
+            var_label = r"$\rho$"
             title_str = r"Parameters: n={}, p={}, s={}, $\sigma$={}"
         elif param_given == "etas":
             etas = [float(x) for x in values_given]
