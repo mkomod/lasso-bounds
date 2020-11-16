@@ -21,13 +21,9 @@ for (i in 1:998) {
 }
 
 xi <- rnorm(1000)
-xi.2 <- (diag(1, 1000) - P) %*% rnorm(1000)
+xi.2 <- (diag(1, 1000) - P) %*% xi
 
 
 hist(xi)
 hist(xi.2)
-
-rankMatrix(P)
-
-
 
