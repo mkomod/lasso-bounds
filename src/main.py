@@ -26,15 +26,15 @@ def generate_data(n, p, s, sig, rho, eta):
     X = np.random.multivariate_normal(mean, cov, n)
     X2 = X.copy()
 
-    for j in range(0, p-1):
-        N = np.random.multivariate_normal(mean, np.eye(p), n)
-        X2 = np.concatenate((X2, X+eta*N), axis = 1)
+    #for j in range(0, p-1):
+    #    N = np.random.multivariate_normal(mean, np.eye(p), n)
+    #    X2 = np.concatenate((X2, X+eta*N), axis = 1)
 
     epsilon = np.random.normal(0, sig, n)
     Y = X.dot(beta_01) + epsilon
 
     X = normalise_matrix(X)
-    X2 = normalise_matrix(X2)
+    #X2 = normalise_matrix(X2)
 
     return {"X": X, "X2": X2, "Y": Y, "beta_01": beta_01, "beta_02": beta_02,
             "n": n, "p": p, "s": s, "sig":sig, "rho": rho}
@@ -51,9 +51,13 @@ def fit_lasso(X, y, lam):
     return beta_hat
     
 
-n, p, s, sig, rho, eta = 20, 40, 4, 1, 0.99, 20
+n, p, s, sig, rho, eta = 20, 40, 10, 1, 0.99, 0
 
-Nexp = 25
+print()
+print("params:", n, p, s, sig, rho, eta)
+print()
+
+Nexp = 1000
 lambdas = np.linspace(0.001, 0.7, 100)
 prediction_error = np.zeros((len(lambdas), Nexp))
 prediction_error2 = np.zeros((len(lambdas), Nexp))
@@ -74,10 +78,10 @@ for exp_num in range(Nexp):
 
     for i, lam in enumerate(lambdas):
         beta_hat = fit_lasso(X, Y, lam)
-        beta_hat2 = fit_lasso(X2, Y, lam)
+        #beta_hat2 = fit_lasso(X2, Y, lam)
         
         prediction_error[i, exp_num] = np.sum(np.power(np.dot(X, beta_hat - beta_01), 2))
-        prediction_error2[i, exp_num] = np.sum(np.power(np.dot(X2, beta_hat2 - beta_02), 2))
+        #prediction_error2[i, exp_num] = np.sum(np.power(np.dot(X2, beta_hat2 - beta_02), 2))
     
     print(f"\r experiment {exp_num+1} / {Nexp}", end = "", flush = True)
 
@@ -87,10 +91,10 @@ for exp_num in range(Nexp):
 
     # find the minimum lambda for this particular experiment
     lambda_min = lambdas[np.argmin(prediction_error[:, exp_num])]
-    lambda_min2 = lambdas[np.argmin(prediction_error2[:, exp_num])]
+    #lambda_min2 = lambdas[np.argmin(prediction_error2[:, exp_num])]
 
     min_lambdas[exp_num] = lambda_min
-    min_lambdas2[exp_num] = lambda_min2
+    #min_lambdas2[exp_num] = lambda_min2
 
 print("\nDone")
 
@@ -102,14 +106,14 @@ lambda_min_1 = np.mean(min_lambdas)
 lambda_min_2 = np.mean(min_lambdas2)
 
 #ignore this, it's for my experiment
-#print()
-#print(f"Average Minimum Lambda: {np.mean(min_lambdas)}")
-#print(f"Standard Deviation: {np.std(min_lambdas)}")
-#print()
-#print(f"Average Minimum Prediction Error: {np.mean(min_PEs)}")
-#print(f"Standard Deviation: {np.std(min_PEs)}")
+print()
+print(f"Average Minimum Lambda: {np.mean(min_lambdas)}")
+print(f"Standard Deviation: {np.std(min_lambdas)}")
+print()
+print(f"Average Minimum Prediction Error: {np.mean(min_PEs)}")
+print(f"Standard Deviation: {np.std(min_PEs)}")
 
-plot_graphs = True
+plot_graphs = False
 
 if plot_graphs == True:
     # ALGO 1
