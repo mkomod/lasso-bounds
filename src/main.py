@@ -105,8 +105,9 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
     var_label = "N/A"
     title_str = "Control"
     if len(sys.argv) > 1:
-        param_given = sys.argv[1]
-        values_given = sys.argv[2:]
+        Nexp = int(sys.argv[1])
+        param_given = sys.argv[2]
+        values_given = sys.argv[3:]
         if param_given == "ns":
             ns = [int(x) for x in values_given]
             var_label = "n"
