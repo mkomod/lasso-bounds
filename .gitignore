@@ -186,7 +186,7 @@ po/*~
 tags
 .ccls
 
-results/*.p
-figs/*.png
+results/*
+figs/*
 .vscode
 *.p
