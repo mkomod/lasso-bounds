@@ -68,6 +68,7 @@ def run_experiments(
     params, lambdas, Nexp, meta_exp_idx, tot_meta_exp, prediction_errors, min_lambdas
 ):
     n, p, s, sig, rho, eta = params
+
     for exp_num in range(Nexp):
         print(
             f"\r eta {meta_exp_idx+1} / {tot_meta_exp}| experiment {exp_num+1} / {Nexp}",
@@ -85,6 +86,8 @@ def run_experiments(
                 np.power(np.dot(X_norm, beta_hat - beta), 2)
             )
         min_lambdas[exp_num] = lambdas[np.argmin(prediction_errors[:, exp_num])]
+    # plt.hist(min_lambdas)
+    # plt.show()
     return min_lambdas, prediction_errors
 
 
@@ -149,6 +152,8 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
     no_meta_exp = len(param_combos)
     mean_prediction_errors = np.zeros((len(lambdas), no_meta_exp))
     mean_min_lambdas = np.zeros((no_meta_exp))
+    min_mean_lambdas = np.zeros((no_meta_exp))
+    median_min_lambdas = np.zeros((no_meta_exp))
 
     # Reusable data stuctures for temporary working
     prediction_errors = np.zeros((len(lambdas), Nexp))
@@ -166,7 +171,11 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
             min_lambdas,
         )
         mean_prediction_errors[:, meta_exp_idx] = np.mean(prediction_errors, axis=1)
+        median_min_lambdas[meta_exp_idx] = np.quantile(min_lambdas, 0.5)
         mean_min_lambdas[meta_exp_idx] = np.mean(min_lambdas)
+        min_mean_lambdas[meta_exp_idx] = lambdas[
+            np.argmin(mean_prediction_errors[:, meta_exp_idx])
+        ]
 
     print("\nDone experiments")
 
@@ -177,7 +186,6 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
     for meta_exp_idx, val in enumerate(varied_param):
 
         green = 1 - (no_meta_exp - meta_exp_idx) / no_meta_exp
-
         if meta_exp_idx == 0:
             label = f"Control"
             c = "b"
@@ -192,7 +200,11 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
             label=label,
             color=c,
         )
-        plt.axvline(mean_min_lambdas[meta_exp_idx], color=c)
+        plt.axvline(mean_min_lambdas[meta_exp_idx], color=c, label="mean(min)")
+        plt.axvline(min_mean_lambdas[meta_exp_idx], ls="--", color=c, label="min(mean)")
+        plt.axvline(
+            median_min_lambdas[meta_exp_idx], ls="-.", color=c, label="median(min)"
+        )
 
     # plt.axvline(np.sqrt(2) * mean_min_lambdas[0], c="k", ls="--", alpha=0.5)
 
