@@ -54,7 +54,7 @@ def fit_lasso(X, y, lam):
     return beta_hat
 
 
-def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=3):
+def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=25):
     print("Starting", end="")
     # Parse any args supplied if used as a CLI
     if len(sys.argv) > 1:
@@ -86,13 +86,13 @@ def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=3):
         )
 
     # Set ranges to experiment over for params of interest
-    etas = np.linspace(0, eta, 5)
-    etas = np.round(etas, 1)
+    etas = (0, 0.001, 0.01, 0.1, 1, 10)
     lambdas = np.linspace(0.001, 0.7, 100)
 
     # Allocate space for results
     mean_prediction_errors = np.zeros((len(lambdas), len(etas)))
-    min_lambdas = np.zeros([len(etas)])
+    min_lambdas = np.zeros((Nexp))
+    mean_min_lambdas = np.zeros((len(etas)))
     quantiles = np.zeros((len(lambdas), len(etas), 2))
 
     prediction_errors = np.zeros((len(lambdas), Nexp))
@@ -113,30 +113,38 @@ def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=3):
                 prediction_errors[lam_idx, exp_num] = np.sum(
                     np.power(np.dot(X, beta_hat - beta), 2)
                 )
+            min_lambdas[exp_num] = lambdas[np.argmin(prediction_errors[:, exp_num])]
 
         quantiles[:, eta_idx, 0] = np.quantile(prediction_errors, 0.025, axis=1)
         quantiles[:, eta_idx, 1] = np.quantile(prediction_errors, 0.975, axis=1)
         mean_prediction_errors[:, eta_idx] = np.mean(prediction_errors, axis=1)
-        min_lambdas[eta_idx] = lambdas[np.argmin(mean_prediction_errors[:, eta_idx])]
+        mean_min_lambdas[eta_idx] = np.mean(min_lambdas)
 
     # Plot Results
     for eta_idx, eta in enumerate(etas):
-        blueness = (tot_etas - eta_idx) / tot_etas
-        c = (1 - blueness, 0.5, blueness)
+        yellowness = 1 - (tot_etas - eta_idx) / tot_etas
+
+        if eta_idx == 0:
+            label = f"Algorithm 1"
+            c = "b"
+        else:
+            label = f"$\eta$={eta}"
+            c = (1, yellowness, 0)
+
         plt.plot(
             lambdas,
-            mean_prediction_errors[:, -eta_idx],
-            label=f"$\eta$={eta}",
+            mean_prediction_errors[:, eta_idx],
+            label=label,
             color=c,
         )
-        plt.fill_between(
-            lambdas,
-            quantiles[:, -eta_idx, 0],
-            quantiles[:, -eta_idx, 1],
-            color=c,
-            alpha=0.5,
-        )
-        plt.axvline(min_lambdas[-eta_idx], color=c, alpha=0.5)
+        # plt.fill_between(
+        #     lambdas,
+        #     quantiles[:, -eta_idx, 0],
+        #     quantiles[:, -eta_idx, 1],
+        #     color=c,
+        #     alpha=0.5,
+        # )
+        plt.axvline(mean_min_lambdas[eta_idx], color=c)
 
     # Save results if you wanna mess around with plotting later
 
@@ -150,7 +158,7 @@ def main(n=20, p=40, s=4, sig=1, rho=0, eta=5, Nexp=3):
             n, p, s, sig, rho
         )
     )
-    plt.axvline(np.sqrt(2) * min_lambdas[0], c="k", ls="--", alpha=0.5)
+    plt.axvline(np.sqrt(2) * mean_min_lambdas[0], c="k", ls="--", alpha=0.5)
     plt.xlabel("$\lambda$")
     plt.ylabel("Prediction Error")
     plt.legend(loc="lower right")
