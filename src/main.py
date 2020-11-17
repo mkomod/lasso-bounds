@@ -86,8 +86,15 @@ def run_experiments(
                 np.power(np.dot(X_norm, beta_hat - beta), 2)
             )
         min_lambdas[exp_num] = lambdas[np.argmin(prediction_errors[:, exp_num])]
-    # plt.hist(min_lambdas)
-    # plt.show()
+    plt.figure()
+    plt.hist(min_lambdas)
+    hist_title = fr"$\rho$ = {rho}"
+    plt.title(hist_title)
+    plt.xlabel("$\lambda$")
+    filename = (
+        hist_title.replace(".", "_").replace("\\", "").replace("$", "").replace(" ", "")
+    )
+    plt.savefig(f"figs/{np.random.randint(0,1000)}_{filename}")
     return min_lambdas, prediction_errors
 
 
@@ -181,6 +188,7 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
 
     print("Plotting...")
     # Plot Results
+    plt.figure()
     varied_param = get_longest_element(orig_params)
     stable_params = [y[0] for y in orig_params if y != varied_param]
     for meta_exp_idx, val in enumerate(varied_param):
@@ -223,11 +231,11 @@ def main(ns=[20], ps=[40], ss=[4], sigs=[1], rhos=[0], etas=[0], Nexp=5):
         .replace(" ", "")
         .replace("Parameters:", "")
     )
-    plt.savefig(f"figs/{title_str}")
+    plt.savefig(f"figs/{title_str}_med{no_meta_exp}")
     # Save results if you wanna mess around with plotting later
     pickle.dump(
         (mean_min_lambdas, mean_prediction_errors, params, Nexp, lambdas),
-        open(f"results/{title_str}.p", "wb"),
+        open(f"results/{title_str}_med{no_meta_exp}.p", "wb"),
     )
 
     # Lets see the money
